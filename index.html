@@ -1,22 +1,85 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>波浪控制</title>
-    <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-        }
-        canvas {
-            display: block;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>AI 聊天室 (Google Gemini)</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 0; }
+    #chat-container { max-width: 600px; margin: 40px auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #ccc; padding: 24px; }
+    #messages { height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 12px; background: #fafafa; margin-bottom: 16px; }
+    .msg { margin-bottom: 12px; }
+    .user { color: #1976d2; font-weight: bold; }
+    .ai { color: #388e3c; font-weight: bold; }
+    #input-area { display: flex; }
+    #user-input { flex: 1; padding: 8px; font-size: 16px; border-radius: 4px; border: 1px solid #bbb; }
+    #send-btn { padding: 8px 20px; margin-left: 8px; font-size: 16px; border-radius: 4px; border: none; background: #1976d2; color: #fff; cursor: pointer; }
+    #send-btn:disabled { background: #aaa; }
+    #api-key { width: 100%; margin-bottom: 12px; padding: 6px; border-radius: 4px; border: 1px solid #bbb; }
+  </style>
 </head>
 <body>
-    <button id="connectButton">連接串口</button>
-    <canvas id="waveCanvas"></canvas>
-    <script src="main.js"></script>
+  <div id="chat-container">
+    <h2>AI 聊天室 (Google Gemini)</h2>
+    <input id="api-key" type="password" placeholder="請輸入你的 Google Gemini API Key" />
+    <div id="messages"></div>
+    <div id="input-area">
+      <input id="user-input" type="text" placeholder="輸入訊息..." autocomplete="off" />
+      <button id="send-btn">送出</button>
+    </div>
+  </div>
+  <script>
+    const apiKeyInput = document.getElementById('api-key');
+    const messagesDiv = document.getElementById('messages');
+    const userInput = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+    let history = [];
+
+    function appendMessage(role, text) {
+      const div = document.createElement('div');
+      div.className = 'msg';
+      div.innerHTML = `<span class="${role}">${role === 'user' ? '你' : 'AI'}：</span>${text}`;
+      messagesDiv.appendChild(div);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    async function sendMessage() {
+      const text = userInput.value.trim();
+      const apiKey = apiKeyInput.value.trim();
+      if (!text) return;
+      if (!apiKey) {
+        appendMessage('ai', '請先輸入 API Key');
+        return;
+      }
+      appendMessage('user', text);
+      userInput.value = '';
+      sendBtn.disabled = true;
+
+      history.push({ role: 'user', parts: [{ text }] });
+
+      try {
+        const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + apiKey, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: history })
+        });
+        const data = await res.json();
+        if (data.error) {
+          appendMessage('ai', `（錯誤：${data.error.message}）`);
+        } else {
+          let aiText = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts[0].text) || '（AI 沒有回應）';
+          appendMessage('ai', aiText);
+          history.push({ role: 'model', parts: [{ text: aiText }] });
+        }
+      } catch (e) {
+        appendMessage('ai', '（發生錯誤，請檢查 API Key 或網路）');
+      }
+      sendBtn.disabled = false;
+    }
+
+    sendBtn.onclick = sendMessage;
+    userInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') sendMessage();
+    });
+  </script>
 </body>
 </html>
