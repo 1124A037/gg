@@ -1,85 +1,240 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <title>AI 聊天室 (Google Gemini)</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 0; }
-    #chat-container { max-width: 600px; margin: 40px auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #ccc; padding: 24px; }
-    #messages { height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 12px; background: #fafafa; margin-bottom: 16px; }
-    .msg { margin-bottom: 12px; }
-    .user { color: #1976d2; font-weight: bold; }
-    .ai { color: #388e3c; font-weight: bold; }
-    #input-area { display: flex; }
-    #user-input { flex: 1; padding: 8px; font-size: 16px; border-radius: 4px; border: 1px solid #bbb; }
-    #send-btn { padding: 8px 20px; margin-left: 8px; font-size: 16px; border-radius: 4px; border: none; background: #1976d2; color: #fff; cursor: pointer; }
-    #send-btn:disabled { background: #aaa; }
-    #api-key { width: 100%; margin-bottom: 12px; padding: 6px; border-radius: 4px; border: 1px solid #bbb; }
-  </style>
+    <meta charset="UTF-8">
+    <title>AI 對話網頁</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(120deg, #e0e7ff 0%, #f8fafc 100%);
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 480px;
+            margin: 40px auto;
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 6px 32px #b6c2e1a0;
+            padding: 32px 18px 18px 18px;
+        }
+        h2 {
+            text-align: center;
+            color: #3b4890;
+            margin-bottom: 18px;
+            letter-spacing: 1px;
+        }
+        #chat {
+            height: 340px;
+            overflow-y: auto;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 0 12px 0;
+            background: #f3f6fd;
+            margin-bottom: 18px;
+            box-shadow: 0 1px 4px #dbeafe80 inset;
+        }
+        .msg {
+            display: flex;
+            margin: 10px 0;
+        }
+        .user {
+            justify-content: flex-end;
+        }
+        .ai {
+            justify-content: flex-start;
+        }
+        .msg-bubble {
+            max-width: 75%;
+            padding: 10px 16px;
+            border-radius: 18px;
+            font-size: 1.05em;
+            line-height: 1.6;
+            box-shadow: 0 2px 8px #c7d2fe40;
+            word-break: break-word;
+        }
+        .user .msg-bubble {
+            background: linear-gradient(120deg, #a5b4fc 60%, #818cf8 100%);
+            color: #fff;
+            border-bottom-right-radius: 6px;
+        }
+        .ai .msg-bubble {
+            background: #e0e7ff;
+            color: #374151;
+            border-bottom-left-radius: 6px;
+        }
+        #inputArea {
+            display: flex;
+            gap: 8px;
+            background: #f3f6fd;
+            border-radius: 10px;
+            padding: 10px 8px;
+            box-shadow: 0 1px 4px #dbeafe40 inset;
+        }
+        #userInput {
+            flex: 1;
+            padding: 10px 12px;
+            border-radius: 6px;
+            border: 1px solid #c7d2fe;
+            font-size: 1em;
+            background: #fff;
+            transition: border 0.2s;
+        }
+        #userInput:focus {
+            border: 1.5px solid #6366f1;
+            outline: none;
+        }
+        #sendBtn, #voiceBtn {
+            padding: 0 18px;
+            border: none;
+            border-radius: 6px;
+            background: linear-gradient(120deg, #6366f1 60%, #818cf8 100%);
+            color: #fff;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background 0.2s, box-shadow 0.2s;
+            box-shadow: 0 2px 8px #c7d2fe40;
+            height: 40px;
+        }
+        #voiceBtn {
+            padding: 0 12px;
+            font-size: 1.2em;
+            background: linear-gradient(120deg, #a5b4fc 60%, #818cf8 100%);
+        }
+        #sendBtn:disabled, #voiceBtn:disabled {
+            background: #c7d2fe;
+            color: #888;
+            cursor: not-allowed;
+        }
+        #sendBtn:hover:not(:disabled), #voiceBtn:hover:not(:disabled) {
+            background: linear-gradient(120deg, #6366f1 80%, #6366f1 100%);
+            box-shadow: 0 4px 16px #6366f140;
+        }
+        #apiKey {
+            width: 100%;
+            margin-bottom: 14px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            border: 1px solid #c7d2fe;
+            font-size: 1em;
+            background: #f3f6fd;
+            transition: border 0.2s;
+        }
+        #apiKey:focus {
+            border: 1.5px solid #6366f1;
+            outline: none;
+        }
+        @media (max-width: 600px) {
+            .container { max-width: 98vw; padding: 10vw 2vw 4vw 2vw; }
+            #chat { height: 48vw; min-height: 220px; }
+        }
+    </style>
 </head>
 <body>
-  <div id="chat-container">
-    <h2>AI 聊天室 (Google Gemini)</h2>
-    <input id="api-key" type="password" placeholder="請輸入你的 Google Gemini API Key" />
-    <div id="messages"></div>
-    <div id="input-area">
-      <input id="user-input" type="text" placeholder="輸入訊息..." autocomplete="off" />
-      <button id="send-btn">送出</button>
+<div class="container">
+    <h2>AI 對話網頁 (Google Gemini)</h2>
+    <input id="apiKey" type="password" placeholder="請輸入你的 Google AI API Key" />
+    <div id="chat"></div>
+    <div id="inputArea">
+        <input id="userInput" type="text" placeholder="輸入訊息..." />
+        <button id="voiceBtn" title="語音輸入">🎤</button>
+        <button id="sendBtn">送出</button>
     </div>
-  </div>
-  <script>
-    const apiKeyInput = document.getElementById('api-key');
-    const messagesDiv = document.getElementById('messages');
-    const userInput = document.getElementById('user-input');
-    const sendBtn = document.getElementById('send-btn');
-    let history = [];
+</div>
+<script>
+const chat = document.getElementById('chat');
+const userInput = document.getElementById('userInput');
+const sendBtn = document.getElementById('sendBtn');
+const apiKeyInput = document.getElementById('apiKey');
+const voiceBtn = document.getElementById('voiceBtn');
 
-    function appendMessage(role, text) {
-      const div = document.createElement('div');
-      div.className = 'msg';
-      div.innerHTML = `<span class="${role}">${role === 'user' ? '你' : 'AI'}：</span>${text}`;
-      messagesDiv.appendChild(div);
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+function appendMsg(text, sender) {
+    const div = document.createElement('div');
+    div.className = 'msg ' + sender;
+    const bubble = document.createElement('div');
+    bubble.className = 'msg-bubble';
+    bubble.textContent = (sender === 'user' ? text : text);
+    div.appendChild(bubble);
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+    // AI 回應時自動語音朗讀
+    if (sender === 'ai' && 'speechSynthesis' in window) {
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = 'zh-TW';
+        window.speechSynthesis.speak(utter);
     }
+}
 
-    async function sendMessage() {
-      const text = userInput.value.trim();
-      const apiKey = apiKeyInput.value.trim();
-      if (!text) return;
-      if (!apiKey) {
-        appendMessage('ai', '請先輸入 API Key');
+async function sendMessage() {
+    const apiKey = apiKeyInput.value.trim();
+    const msg = userInput.value.trim();
+    if (!apiKey) {
+        alert('請先輸入 API Key');
         return;
-      }
-      appendMessage('user', text);
-      userInput.value = '';
-      sendBtn.disabled = true;
-
-      history.push({ role: 'user', parts: [{ text }] });
-
-      try {
+    }
+    if (!msg) return;
+    appendMsg(msg, 'user');
+    userInput.value = '';
+    sendBtn.disabled = true;
+    try {
+        // Google Gemini API (Generative Language API)
         const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + apiKey, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: history })
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: msg }] }]
+            })
         });
         const data = await res.json();
-        if (data.error) {
-          appendMessage('ai', `（錯誤：${data.error.message}）`);
+        if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
+            const aiText = data.candidates[0].content.parts.map(p => p.text).join('');
+            appendMsg(aiText, 'ai');
+        } else if (data.error) {
+            appendMsg('API 錯誤: ' + data.error.message, 'ai');
         } else {
-          let aiText = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts[0].text) || '（AI 沒有回應）';
-          appendMessage('ai', aiText);
-          history.push({ role: 'model', parts: [{ text: aiText }] });
+            appendMsg('無法取得 AI 回應', 'ai');
         }
-      } catch (e) {
-        appendMessage('ai', '（發生錯誤，請檢查 API Key 或網路）');
-      }
-      sendBtn.disabled = false;
+    } catch (e) {
+        appendMsg('網路或 API 錯誤: ' + e.message, 'ai');
     }
+    sendBtn.disabled = false;
+}
 
-    sendBtn.onclick = sendMessage;
-    userInput.addEventListener('keydown', e => {
-      if (e.key === 'Enter') sendMessage();
-    });
-  </script>
+// 語音輸入功能
+if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'zh-TW';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    voiceBtn.onclick = function() {
+        voiceBtn.disabled = true;
+        voiceBtn.textContent = '🎤錄音中...';
+        recognition.start();
+    };
+    recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        userInput.value = transcript;
+        sendMessage();
+    };
+    recognition.onerror = function() {
+        voiceBtn.disabled = false;
+        voiceBtn.textContent = '🎤';
+    };
+    recognition.onend = function() {
+        voiceBtn.disabled = false;
+        voiceBtn.textContent = '🎤';
+    };
+} else {
+    voiceBtn.disabled = true;
+    voiceBtn.title = '瀏覽器不支援語音輸入';
+}
+
+sendBtn.onclick = sendMessage;
+userInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') sendMessage();
+});
+</script>
 </body>
 </html>
